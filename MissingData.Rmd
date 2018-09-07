@@ -1,0 +1,296 @@
+---
+title: "STAT471 Project"
+author: "Wei Sern Thum"
+date: "4/30/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Function declarations
+
+```{r}
+cMiss = function(x){
+  sum(is.na(x))
+}
+plot = function(df, cMiss){
+  CM <- sort(apply(df,2,cMiss),decreasing=T)
+  print(CM)
+  barplot(CM[CM!=0],
+        las=2,
+        cex.names=0.6,
+        ylab="Count",
+        ylim=c(0,3000),
+        horiz=F,
+        col="#AFC0CB",
+        main=paste(toString(sum(CM!=0)), "variables with missing values in dataset"))
+}
+
+dfClean <-function(df){
+df$PoolQC <- as.character(df$PoolQC)
+df$PoolQC[df$PoolArea %in% c(0,NA) & is.na(df$PoolQC)] <- "NoPool"
+df$PoolQC <- as.factor(df$PoolQC)
+
+df$MiscFeature <- as.character(df$MiscFeature)
+df$MiscFeature[df$MiscVal %in% c(0,NA) & is.na(df$MiscFeature)] <- "None"
+df$MiscFeature <- as.factor(df$MiscFeature)
+
+df$Alley <- as.character(df$Alley)
+df$Alley[is.na(df$Alley)] <- "NoAccess"
+df$Alley <- as.factor(df$Alley)    
+
+df$Fence <- as.character(df$Fence)
+df$Fence[is.na(df$Fence)] <- "NoFence"
+df$Fence <- as.factor(df$Fence)
+
+df$FireplaceQu <- as.character(df$FireplaceQu)
+df$FireplaceQu[df$Fireplaces %in% c(0,NA) & is.na(df$FireplaceQu)] <- "NoFirePlace"
+df$FireplaceQu <- as.factor(df$FireplaceQu)   
+
+df$GarageYrBlt <- as.character(df$GarageYrBlt)
+df$GarageYrBlt[df$GarageArea %in% c(0,NA) & is.na(df$GarageYrBlt)] <- "NoGarage"
+df$GarageYrBlt <- as.factor(df$GarageYrBlt)
+
+df$GarageFinish <- as.character(df$GarageFinish)
+df$GarageFinish[df$GarageArea %in% c(0,NA) & is.na(df$GarageFinish)] <- "NoGarage"
+df$GarageFinish <- as.factor(df$GarageFinish)
+
+df$GarageQual <- as.character(df$GarageQual)
+df$GarageQual[df$GarageArea %in% c(0,NA) & is.na(df$GarageQual)] <- "NoGarage"
+df$GarageQual <- as.factor(df$GarageQual)
+
+df$GarageCond <- as.character(df$GarageCond)
+df$GarageCond[df$GarageArea %in% c(0,NA) & is.na(df$GarageCond)] <- "NoGarage"
+df$GarageCond <- as.factor(df$GarageCond)
+
+df$GarageType <- as.character(df$GarageType)
+df$GarageType[df$GarageArea %in% c(0,NA) & is.na(df$GarageType)] <- "NoGarage"
+df$GarageType <- as.factor(df$GarageType)
+
+df$GarageArea[is.na(df$GarageArea) & df$GarageCars %in% c(0,NA)] <- 0
+
+df$GarageCars[is.na(df$GarageCars) & df$GarageArea %in% c(0,NA)] <- 0    
+
+df$BsmtFinSF1[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtFinSF1)] <- 0
+
+df$BsmtFinSF2[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtFinSF2)] <- 0
+
+df$BsmtUnfSF[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtUnfSF)] <- 0
+
+df$BsmtQual <- as.character(df$BsmtQual)
+df$BsmtQual[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtQual)] <- "NoBasement"
+df$BsmtQual <- as.factor(df$BsmtQual)
+
+df$BsmtFinType1 <- as.character(df$BsmtFinType1)
+df$BsmtFinType1[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtFinType1)] <- "NoBasement"
+df$BsmtFinType1 <- as.factor(df$BsmtFinType1)    
+
+df$BsmtFinType2 <- as.character(df$BsmtFinType2)
+df$BsmtFinType2[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtFinType2)] <- "NoBasement"
+df$BsmtFinType2 <- as.factor(df$BsmtFinType2)
+
+df$BsmtExposure <- as.character(df$BsmtExposure)
+df$BsmtExposure[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtExposure)] <- "NoBasement"
+df$BsmtExposure <- as.factor(df$BsmtExposure)
+
+df$BsmtCond <- as.character(df$BsmtCond)
+df$BsmtCond[df$TotalBsmtSF %in% c(0,NA) & is.na(df$BsmtCond)] <- "NoBasement"
+df$BsmtCond <- as.factor(df$BsmtCond)  
+return(df)    
+}
+```
+
+## Pre-processing of Predictor Columns
+
+```{r}
+# Read training file
+df = read.csv("train.csv", header = TRUE, stringsAsFactors = TRUE)
+# Save salesPrice
+salePrice = df$SalePrice
+
+# Take out Id
+df = df[,2:80]
+
+# Convert to Factor Variables
+df$YearBuilt<-as.factor(df$YearBuilt)
+df$YearRemodAdd<-as.factor(df$YearRemodAdd)
+df$MSSubClass<-as.factor(df$MSSubClass)
+df$OverallQual<-as.factor(df$OverallQual)
+df$OverallCond<-as.factor(df$OverallCond)
+df$MoSold<-as.factor(df$MoSold)
+df$YrSold<-as.factor(df$YrSold)
+df$GarageYrBlt<-as.factor(df$GarageYrBlt)
+#df[!complete.cases(df),]
+# Show initial NA values
+plot(df, cMiss)
+
+df <- dfClean(df)
+plot(df, cMiss)
+
+## After preliminary cleaning
+df[ (is.na(df$MasVnrType) | is.na(df$MasVnrArea)) ,c("MasVnrType","MasVnrArea")]
+summary(df[ !(is.na(df$MasVnrType) | is.na(df$MasVnrArea)) ,c("MasVnrType","MasVnrArea")])
+df$MasVnrType <- as.character(df$MasVnrType)
+df$MasVnrType[is.na(df$MasVnrType)] <- "None"
+df$MasVnrType <- as.factor(df$MasVnrType)  
+df$MasVnrArea[is.na(df$MasVnrArea)] <- 0
+ind = which(((is.na(df$BsmtExposure) | is.na(df$BsmtFinType2) | is.na(df$Electrical))))
+salePrice = salePrice[-c(ind)]
+df = df[ !((is.na(df$BsmtExposure) | is.na(df$BsmtFinType2) | is.na(df$Electrical))),]
+plot(df, cMiss)
+
+## Imputing Lot Frontage Values (last step)
+meanImpute = mean(df$LotFrontage, na.rm = TRUE)
+meanImpute = as.data.frame(rep(meanImpute, nrow(df)))
+df = cbind(df, meanImpute)
+df = subset(df, select = -c(LotFrontage))
+colnames(df)[which(names(df) == "rep(meanImpute, nrow(df))")] <- "LotFrontage"
+CM <- sort(apply(df,2,cMiss),decreasing=T)
+barplot(CM,
+        las=2,
+        cex.names=0.6,
+        ylab="Count",
+        ylim=c(0,10),
+        horiz=F,
+        col="#AFC0CB",
+        main=paste(toString(sum(CM!=0)), "variables with missing values in dataset"))
+```
+
+## Feature Engineering (OneHot)
+
+```{r}
+library(mltools)
+library(data.table)
+library(randomForest)
+library(ggplot2)
+testdf = one_hot(as.data.table(df))
+ncol(testdf)
+#numericVars <- which(sapply(df, is.numeric))
+#factorVars <- which(sapply(df, is.factor))
+#all_numVar <- df[, numericVars]
+#cor_numVar <- cor(all_numVar, use="pairwise.complete.obs")
+set.seed(2018)
+quick_RF <- randomForest(x=testdf[1:1457,], y=salePrice[1:1457], ntree=100,importance=TRUE)
+imp_RF <- importance(quick_RF)
+imp_DF <- data.frame(Variables = row.names(imp_RF), MSE = imp_RF[,1])
+imp_DF <- imp_DF[order(imp_DF$MSE, decreasing = TRUE),]
+ggplot(imp_DF[1:20,], aes(x=reorder(Variables, MSE), y=MSE, fill=MSE)) + geom_bar(stat = 'identity') + labs(x = 'Variables', y= '% increase MSE if variable is randomly permuted') + coord_flip() + theme(legend.position="none")
+```
+
+## Modeling Data
+
+```{r}
+model1 = lm(salePrice ~ testdf$GrLivArea + testdf$ExterQual_TA + testdf$X2ndFlrSF)
+```
+
+## Including Plots
+
+```{r}
+library(Amelia)
+df = read.csv("train.csv", header = TRUE)
+dfNumeric = cbind(df$LotFrontage, df$LotArea, df$TotalBsmtSF, df$GrLivArea, df$GarageArea)
+colnames(dfNumeric) = c("LotFrontage", "LotArea", "TotalBsmtSF", "GrLivArea", "GarageArea")
+cor(dfNumeric, use = "complete.obs")
+dfPred = cbind(df$LotFrontage, df$LotArea)
+colnames(dfPred) = c("LotFrontage", "LotArea")
+out = amelia(dfPred, m = 1)
+#complete = out$imputations$imp1
+temp = as.data.frame(out$imputations$imp1[, 1])
+complete = cbind(dfPred, temp)
+names(complete)[3] = "EMLotFrontage"
+salePrice = df$SalePrice
+qqnorm(df$SalePrice)
+qqnorm(log(df$SalePrice))
+EM1 = lm(complete$LotArea ~ complete$EMLotFrontage)
+#EM2 = lm(log(df$SalePrice) ~ complete$EMLotFrontage)
+```
+
+## Find out mean imputation vs multiple imputation
+```{r}
+Error = function(x){
+  sum = 0
+  count = 0
+  for (i in 1:nrow(x)){
+    if (is.na(x$LotFrontage[i])){
+      sum = sum + (abs(x$EMLF[i] - x$ActualLF[i]))
+      count = count + 1
+    }
+  }
+  return(sum/count)
+}
+```
+
+# Conducting R simulation for identifying best imputation method
+
+```{r}
+library(Amelia)
+# merge test and training data
+df1 = read.csv("train.csv", header = TRUE)
+df2 = read.csv("test.csv", header = TRUE)
+df1 = subset(df1, select = -c(SalePrice))
+testdf = rbind(df1, df2)
+
+# Delete rows where LotFrontage is NA
+dfFull = cbind(testdf$LotFrontage, testdf$LotArea, testdf$TotalBsmtSF, testdf$GrLivArea, testdf$GarageArea)
+before = nrow(dfFull)
+dfFull = as.data.frame(dfFull[complete.cases(dfFull), ])
+names(dfFull) = c("LotFrontage", "LotArea", "TotalBsmtSF", "GrLivArea", "GarageArea")
+after = nrow(dfFull)
+cat("Before:", before, ", After:", after)
+full = dfFull$LotFrontage
+
+# Randomly set 20% of the data to NA
+LFvect = dfFull$LotFrontage
+LFvect = as.vector(LFvect)
+n = 0.2*length(LFvect)
+set.seed(40)
+counter = 0
+while (n >= counter){
+  rand = runif(1, min = 1, max = length(LFvect))
+  index = floor(rand)
+  if (is.na(LFvect[index]) == FALSE){
+    counter = counter + 1
+    LFvect[index] = NA
+  }
+}
+
+# Analyze correlation of LotFrontage against other predictors
+cor(dfFull)
+
+# All possible numeric predictors using Amelia multiple imputation for imputing LotFrontage
+dfFull1 = cbind(as.data.frame(LFvect), dfFull$LotArea, dfFull$TotalBsmtSF, dfFull$GrLivArea, dfFull$GarageArea)
+out = amelia(dfFull1)
+temp = as.data.frame(out$imputations$imp1[, 1])
+complete1 = cbind(dfFull1, temp)
+complete1 = cbind(complete1, as.data.frame(full))
+names(complete1) = c("LotFrontage", "LotArea", "TotalBsmtSF", "GrLivArea", "GarageArea", "EMLF", "ActualLF")
+
+# Only LotArea which has the highest correlation with LotFrontage
+dfFull2 = cbind(as.data.frame(LFvect), complete1$LotArea)
+out = amelia(dfFull2)
+temp = as.data.frame(out$imputations$imp1[, 1])
+complete2 = cbind(dfFull2, temp)
+complete2 = cbind(complete2, as.data.frame(full))
+names(complete2) = c("LotFrontage", "LotArea", "EMLF", "ActualLF")
+
+# Calculating Mean Average Error
+Error(complete1)
+Error(complete2)
+dummy = rep(0, length(LFvect))
+
+# Mean imputation using available LotFrontage values
+complete3 = cbind(as.data.frame(LFvect), as.data.frame(dummy), full)
+names(complete3) = c("LotFrontage","EMLF", "ActualLF")
+mean = mean(complete3$LotFrontage, na.rm = TRUE)
+for (i in 1:nrow(complete3)){
+  complete3$EMLF[i] = mean
+}
+Error(complete3)
+
+# Comparing the mean of the available data vs mean of the full data
+mean
+mean(full)
+```
+
